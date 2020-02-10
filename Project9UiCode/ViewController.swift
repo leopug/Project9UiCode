@@ -121,7 +121,7 @@ class ViewController: UIViewController {
             for column in 0..<5{
                 let letterButton = UIButton(type: .system)
                 letterButton.titleLabel?.font = UIFont.systemFont(ofSize: 36)
-                letterButton.setTitle("WWW", for: .normal)
+                //letterButton.setTitle("WWW", for: .normal)
                 letterButton.addTarget(self, action: #selector(letterTapped), for: .touchUpInside)
                 letterButton.layer.borderColor = UIColor.gray.cgColor
                 letterButton.layer.borderWidth = 0.8
@@ -146,10 +146,15 @@ class ViewController: UIViewController {
         
         guard let buttonTitle = sender.titleLabel?.text else {return}
         
+        UIView.animate(withDuration: 0.6, delay: 0, options: .curveEaseIn, animations: {
+            sender.alpha = 0
+        }) { finished in
+         //   sender.isHidden = true
+        }
+        
         currentAnswer.text = currentAnswer.text?.appending(buttonTitle)
         activatedButtons.append(sender)
-        sender.isHidden = true
-        
+
     }
 
     @objc func submitTapped(_ sender: UIButton){
@@ -208,7 +213,8 @@ class ViewController: UIViewController {
         currentAnswer.text = ""
         
         for button in activatedButtons {
-            button.isHidden = false
+          //  button.isHidden = false
+            button.alpha = 1
         }
         
         activatedButtons.removeAll()
@@ -216,44 +222,51 @@ class ViewController: UIViewController {
     
     func loadLevel(){
         
-        var clueString = ""
-        var solutionsString = ""
-        var letterBits = [String]()
-        
-        if let levelFileUrl = Bundle.main.url(forResource: "level\(level)", withExtension: ".txt") {
-            if let levelContents = try? String(contentsOf: levelFileUrl) {
-                var lines = levelContents.components(separatedBy: "\n")
-                lines.shuffle()
-                
-                for (index,line) in lines.enumerated() {
-                    let parts = line.components(separatedBy: ": ")
-                    let answer = parts[0]
-                    let clue = parts[1]
+        DispatchQueue.global(qos: .background).async {
+        [weak self] in
+            var clueString = ""
+            var solutionsString = ""
+            var letterBits = [String]()
+            
+            if let levelFileUrl = Bundle.main.url(forResource: "level\(self?.level ?? 3)", withExtension: ".txt") {
+                if let levelContents = try? String(contentsOf: levelFileUrl) {
+                    var lines = levelContents.components(separatedBy: "\n")
+                    lines.shuffle()
                     
-                    clueString += "\(index+1). \(clue)\n"
-                    
-                    let solutionWord = answer.replacingOccurrences(of: "|", with: "")
-                    solutionsString += "\(solutionWord.count) letters\n"
-                    solutions.append(solutionWord)
-                    
-                    let bits = answer.components(separatedBy: "|")
-                    letterBits += bits
+                    for (index,line) in lines.enumerated() {
+                        let parts = line.components(separatedBy: ": ")
+                        let answer = parts[0]
+                        let clue = parts[1]
+                        
+                        clueString += "\(index+1). \(clue)\n"
+                        
+                        let solutionWord = answer.replacingOccurrences(of: "|", with: "")
+                        solutionsString += "\(solutionWord.count) letters\n"
+                        self?.solutions.append(solutionWord)
+                        
+                        let bits = answer.components(separatedBy: "|")
+                        letterBits += bits
+                    }
                 }
             }
-        }
-        
-        cluesLabel.text = clueString.trimmingCharacters(in: .whitespacesAndNewlines)
-        answersLabel.text = solutionsString.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        letterButtons.shuffle()
-        
-        if letterButtons.count == letterBits.count {
-            for i in 0..<letterButtons.count {
-                letterButtons[i].setTitle(letterBits[i], for: .normal)
+            
+            DispatchQueue.main.async {
+                 self?.cluesLabel.text = clueString.trimmingCharacters(in: .whitespacesAndNewlines)
+                 self?.answersLabel.text = solutionsString.trimmingCharacters(in: .whitespacesAndNewlines)
             }
+ 
+            
+            self?.letterButtons.shuffle()
+               
+                if self?.letterButtons.count == letterBits.count {
+                    for i in 0..<self!.letterButtons.count {
+                        DispatchQueue.main.async {
+                            self?.letterButtons[i].setTitle(letterBits[i], for: .normal)
+                        }
+                    }
+                }
+            
         }
-        
     }
-    
 }
 
